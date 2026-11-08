@@ -541,7 +541,9 @@ button.info-row:not(:disabled):hover { background: var(--hover); cursor: pointer
 .welcome h1 { margin: 6px 0 0; font-size: 26px; }
 .welcome-card { width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-top: 10px; }
 .welcome-card h2 { margin: 0; font-size: 18px; }
-.welcome-note { display: flex; gap: 6px; align-items: flex-start; text-align: left; margin-top: 6px; }
+.welcome-note { display: flex; gap: 8px; align-items: flex-start; text-align: left; margin-top: 6px; line-height: 1.5; }
+.welcome-note > .icon { flex-shrink: 0; margin-top: 2px; }
+.welcome-note b { overflow-wrap: anywhere; }
 
 /* sidebar */
 .sb-family { display: flex; align-items: center; gap: 8px; margin: 0 12px 8px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text); cursor: pointer; text-align: left; }

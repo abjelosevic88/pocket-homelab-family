@@ -10,7 +10,8 @@ export default function Welcome() {
   const { user } = useApp()
   const { reload } = useFamily()
   const { toast } = useToast()
-  const [name, setName] = useState(user?.name ? `The ${user.name.trim().split(/\s+/).slice(-1)[0]} family` : 'Our family')
+  const words = (user?.name || '').trim().split(/\s+/).filter(Boolean)
+  const [name, setName] = useState(words.length > 1 ? `The ${words[words.length - 1]} family` : 'Our family')
   const [me, setMe] = useState(user?.name || '')
   const [emoji, setEmoji] = useState('🏡')
   const [busy, setBusy] = useState(false)
@@ -31,7 +32,7 @@ export default function Welcome() {
         <Field label="Your name, as the family sees it"><input value={me} onChange={e => setMe(e.target.value)} placeholder="Ana" /></Field>
         <button className="btn primary lg" disabled={busy}><Icon name="plus" size={16} />Make the family</button>
       </form>
-      <p className="muted small welcome-note"><Icon name="info" size={14} />Someone else already made yours? Ask them to add you under <b>Family</b> with your email (<b>{user?.email}</b>) — it shows up here by itself.</p>
+      <p className="muted small welcome-note"><Icon name="info" size={14} /><span>Someone else already made yours? Ask them to add you under <b>Family</b> with your email (<b>{user?.email}</b>) — it shows up here by itself.</span></p>
     </div>
   )
 }
