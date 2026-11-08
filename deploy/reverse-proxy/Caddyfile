@@ -1,0 +1,4 @@
+# Pocket Family behind Caddy.
+family.example.com {
+	reverse_proxy pocket-family:8080
+}
