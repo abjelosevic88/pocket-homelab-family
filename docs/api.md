@@ -56,3 +56,5 @@ Events on the Pocket Core bus: `family.run_needs_cover`, `family.run_taken`, `fa
 ## Box
 
 `GET /healthz`, `/readyz`, `/metrics`; `GET /export.json`, `POST /import` (a Pocket Family export; twice adds nothing twice); `GET /backup` (admin).
+
+`GET /pocket/portable`: Pocket Move can copy your family out and bring it in (link scopes `move:export` for `GET /export.json`, `move:import` for `POST /import`, raw JSON). Someone in no family yet gets an empty export, and an import makes the family first.

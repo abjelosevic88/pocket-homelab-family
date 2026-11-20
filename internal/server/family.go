@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,6 +69,25 @@ func (s *Server) needFamily(next http.Handler) http.Handler {
 		if err != nil {
 			if want == "" {
 				writeJSON(w, http.StatusNotFound, map[string]string{"error": "make a family first, or ask to be added to one", "code": "no_family"})
+				return
+			}
+			s.fail(w, err, "family")
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), famKey, f)))
+	})
+}
+
+// mayFamily is needFamily for the export and import: a person who is in no
+// family yet goes on without one (the handlers cope).
+func (s *Server) mayFamily(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u := userFrom(r.Context())
+		want := firstNonEmpty(r.Header.Get("X-Family"), r.URL.Query().Get("family"))
+		f, err := s.familyOf(r.Context(), u, want)
+		if err != nil {
+			if want == "" && errors.Is(err, store.ErrNotFound) {
+				next.ServeHTTP(w, r)
 				return
 			}
 			s.fail(w, err, "family")

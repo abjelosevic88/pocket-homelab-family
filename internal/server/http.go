@@ -41,11 +41,19 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
 			r.Use(s.needFamily)
-			r.Get("/export.json", s.handleExportJSON)
-			r.Post("/import", s.handleImport)
 			r.Post("/ai/letter", s.handleAILetter)
 			r.Post("/ai/quick", s.handleAIQuick)
 			r.Get("/ai/week", s.handleAIWeek)
+		})
+
+		// the export and import work before there is a family too (Pocket Move:
+		// an empty export, and an import that makes the family first)
+		r.Group(func(r chi.Router) {
+			r.Use(s.requireAuth)
+			r.Use(s.mayFamily)
+			r.Get("/export.json", s.handleExportJSON)
+			r.Post("/import", s.handleImport)
+			r.Get(strings.TrimPrefix(core.PortablePath, "/api/v1"), portable.Handler())
 		})
 
 		r.Group(func(r chi.Router) {

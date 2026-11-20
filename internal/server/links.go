@@ -21,6 +21,17 @@ var linkOffers = []core.Offer{
 	{Scope: "family:write", Name: "Add to your family", Description: "Put things on the shopping list, add a plan, a pick-up, a chore, a letter or a note on the board, take a pick-up or tick off a chore for you (a reminder from Pocket Flows, a sentence you said to Pocket Voice or Pocket AI). It may change or remove only what that app added."},
 }
 
+// portable is what Pocket Move may copy out and bring in for a person
+// (docs/move.md in pocket-homelab-core); Register adds move:export/import.
+var portable = &core.Portable{
+	Exports: []core.PortableExport{
+		{Path: "/api/v1/export.json", File: "family.json", Kind: core.KindPocket, Title: "Your family: its people, pick-ups and plans, chores, events, shopping lists, school terms, letters, the board and the family info"},
+	},
+	Imports: []core.PortableImport{
+		{Path: "/api/v1/import", Kind: core.KindPocket, ContentType: "application/json", MaxBytes: 32 << 20, Title: "Adds the family from another box (or makes it, if you are in none yet); what is already there is left alone"},
+	},
+}
+
 type linkRoute struct {
 	methods string
 	path    *regexp.Regexp
@@ -40,6 +51,9 @@ var errLinkScope = errors.New("outside the link's scope")
 
 // linkAllows reports whether a link token with these scopes may make this request.
 func linkAllows(scopes []string, r *http.Request) bool {
+	if portable.LinkAllows(scopes, r) {
+		return true
+	}
 	for _, lr := range linkRoutes {
 		if !strings.Contains(" "+lr.methods+" ", " "+r.Method+" ") || !lr.path.MatchString(r.URL.Path) {
 			continue

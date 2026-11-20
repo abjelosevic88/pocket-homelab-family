@@ -170,6 +170,12 @@ func (s *Server) export(ctx context.Context, f *store.Family) (exportDoc, error)
 
 func (s *Server) handleExportJSON(w http.ResponseWriter, r *http.Request) {
 	f := famFrom(r.Context())
+	if f == nil {
+		// in no family yet: nothing to take along
+		w.Header().Set("Content-Disposition", `attachment; filename="pocket-family.json"`)
+		writeJSON(w, http.StatusOK, exportDoc{App: "pocket-family", Version: Version, ExportedAt: store.Now(), People: []store.Person{}})
+		return
+	}
 	doc, err := s.export(r.Context(), f)
 	if err != nil {
 		s.fail(w, err, "export")
@@ -180,21 +186,56 @@ func (s *Server) handleExportJSON(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, doc)
 }
 
-// handleImport adds a Pocket Family export to the current family.
+// handleImport adds a Pocket Family export to the current family. Someone
+// in no family yet (a person brought over by Pocket Move) gets the export's
+// family made first, with them as a grown-up who looks after it.
 func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
-	if !canManage(w, r) {
+	ctx := r.Context()
+	if famFrom(ctx) != nil && !canManage(w, r) {
 		return
 	}
-	ctx := r.Context()
 	var doc exportDoc
 	if err := decode(r, &doc); err != nil || doc.App != "pocket-family" {
 		writeErr(w, http.StatusBadRequest, "that is not a Pocket Family export")
 		return
 	}
-	n, err := s.importDoc(ctx, famFrom(ctx), doc)
+	made := 0
+	f := famFrom(ctx)
+	if f == nil {
+		if strings.TrimSpace(doc.Family.Name) == "" {
+			writeJSON(w, http.StatusOK, map[string]int{"families": 0})
+			return
+		}
+		u := userFrom(ctx)
+		nf := &store.Family{Name: strings.TrimSpace(doc.Family.Name), Emoji: firstNonEmpty(doc.Family.Emoji, "🏡"), Color: firstNonEmpty(doc.Family.Color, "#e8603c")}
+		me := &store.Person{Name: firstNonEmpty(u.Name, strings.Split(u.Email, "@")[0]), Email: u.Email, Role: store.RoleGrownup, Color: palette[0]}
+		for _, p := range doc.People {
+			if p.Email != "" && strings.EqualFold(p.Email, u.Email) && p.Name != "" {
+				me.Name, me.Color = p.Name, firstNonEmpty(p.Color, me.Color)
+			}
+		}
+		if err := s.store.CreateFamily(ctx, u.ID, nf, me); err != nil {
+			s.fail(w, err, "create family")
+			return
+		}
+		st, _ := s.store.GetSettings(ctx, u.ID)
+		st.FamilyID = nf.ID
+		_ = s.store.SaveUserSettings(ctx, u.ID, st)
+		var err error
+		if f, err = s.store.FamilyFor(ctx, u.ID, nf.ID); err != nil {
+			s.fail(w, err, "family")
+			return
+		}
+		ctx = context.WithValue(ctx, famKey, f)
+		made = 1
+	}
+	n, err := s.importDoc(ctx, f, doc)
 	if err != nil {
 		s.fail(w, err, "import")
 		return
+	}
+	if made > 0 {
+		n["families"] = made
 	}
 	writeJSON(w, http.StatusOK, n)
 }
